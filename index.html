@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Retrouvez toute les musiques de l'artiste YaProd.">
+
+  <title>YaProd - Musician</title>
+
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css"
+    integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="assets/scss/styles.css">
+  <link href="img/logo.ico" rel="shortcut icon" />
+    
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="index.js" async></script>
+
+</head>
+
+<body class="body-home">
+
+  <div class="burger">
+    <span></span>
+</div>
+  
+<nav>
+    <ul class="main">
+        <li><a href="index.html" class="vis">Home</a></li>
+        <li><a href="music.html" class="vis">Music</a></li>
+        <li><a href="contact.html" class="vis">Contact</a></li>
+    </ul>
+    
+    <div class="social" class="vis">
+        <a href="https://soundcloud.com/yaprod"><i class="fab fa-soundcloud"></i></a>
+    </div>
+    
+    <ul class="sub" class="vis">
+        <li><a href="#0">PUNCH PRODUCTION</a></li>
+        <li><a href="#0">Clem's Videaste</a></li>
+        <li><a href="#0">FiliAtmos</li>
+        <li><a href="#0">DXNNY</li>
+    </ul>
+</nav>
+
+  <div id='stars'></div>
+  <div id='stars2'></div>
+  <div id='stars3'></div>
+  <div id='title'>
+    <span class="title-yaprod">
+      YaProd
+    </span>
+    <br>
+    <span class="title-music">
+      Music
+    </span>
+  </div>
+
+
+  <script>
+      $('.burger, .overlay').click(function(){
+    $('.burger').toggleClass('clicked');
+    $('.overlay').toggleClass('show');
+    $('nav').toggleClass('show');
+    $('body').toggleClass('overflow');
+  });
+  </script>
+</body>
+</html>
