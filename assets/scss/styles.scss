@@ -67,7 +67,6 @@ header {
     bottom: 0;
     z-index: 100;
     width: 100%;
-    padding-bottom: 10px;
     & a {
       text-decoration: none;
       & i {
@@ -77,10 +76,15 @@ header {
       }
       & h6 {
         margin-top: 8px;
+        font-family: 'saira_condensedlight';
       }
     }
   }
-
+  .header-device-music {
+    background-color: rgb(39, 39, 39);
+    z-index: 1000;
+    padding-top: 10px;
+  }
   header {
     display: none;
   }
@@ -209,6 +213,7 @@ audio {
   position: fixed;
   bottom: 0;
   width: 100%;
+  z-index: 1000;
 }
 #tracks {
   font-size: 0;
