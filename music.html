@@ -44,22 +44,6 @@
     </header>
 
     <main class="audioPlayer" id="app">
-        <a class="nav-icon" v-on:click="isPlaylistActive=!isPlaylistActive" :class="{'isActive': isPlaylistActive}"
-            title="Music List">
-            <span></span>
-            <span></span>
-            <span></span>
-        </a>
-        <div class="audioPlayerList" :class="{'isActive': isPlaylistActive}">
-            <div class="item" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }"
-                v-on:click="changeSong(index),isPlaylistActive=!isPlaylistActive">
-                <p class="title">{{ item.title }}</p>
-                <p class="artist">{{ item.artist }}</p>
-            </div>
-
-            <p class="debugToggle" v-on:click="toggleDebug()">debug: {{ debug }}</p>
-
-        </div>
         <div class="audioPlayerUI" :class="{'isDisabled': isPlaylistActive}">
             <div class="albumImage">
                 <transition name="ballmove" enter-active-class="animated zoomIn"
@@ -101,6 +85,13 @@
                 <div class="currentProgress" :style="{ width: currentProgressBar + '%' }"></div>
             </div>
         </div>
+        <div class="list">
+            <div class="list2" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }"
+                v-on:click="changeSong(index),isPlaylistActive=!isPlaylistActive">
+                <p class="title2">{{ item.title }}</p>
+                <p class="artist2">{{ item.artist }}</p>
+            </div>
+        </div>
     </main>
 
     <div class="header-device header-device-music">
@@ -125,11 +116,6 @@
     <style>
         @import url("https://fonts.googleapis.com/css?family=Inconsolata:400,700");
         @import url("https://fonts.googleapis.com/css?family=Raleway:400,400i,700");
-
-        .debug main * {
-            outline: solid 0.25rem rgba(255, 0, 0, 0.25);
-        }
-
         * {
             box-sizing: border-box;
         }
@@ -209,72 +195,17 @@
             -webkit-transform: rotate(-135deg);
             transform: rotate(-135deg);
         }
-
-        .audioPlayer .audioPlayerList {
-            color: white;
-            width: 17rem;
-            -webkit-transition: 0.5s;
-            transition: 0.5s;
-            -webkit-transform: translateX(-200%);
-            transform: translateX(-200%);
-            position: absolute;
-            margin-top: 1.5rem;
-            overflow: auto;
-            z-index: 10;
-            will-change: transform;
+        .list {
+            margin-top: 50px;
+            text-align: center;
+        }
+        .list2 {
+            margin-bottom: 40px;
+        }
+        .list2 .title2 {
+            font-size: 1.7em;
         }
 
-        .audioPlayer .audioPlayerList.isActive {
-            -webkit-transform: translateX(0);
-            transform: translateX(0);
-        }
-
-        .audioPlayer .audioPlayerList .item {
-            margin-bottom: 1.5rem;
-            border-left: 0.1rem solid transparent;
-            -webkit-transition: 0.2s;
-            transition: 0.2s;
-        }
-
-        .audioPlayer .audioPlayerList .item:hover {
-            padding-left: 0.5rem;
-            cursor: pointer;
-        }
-
-        .audioPlayer .audioPlayerList .item .title {
-            color: rgb(180, 123, 0);
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .audioPlayer .audioPlayerList .item .artist {
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        .audioPlayer .audioPlayerList .item.isActive {
-            border-left-color: rgb(180, 123, 0);
-            padding-left: 1rem;
-        }
-
-        .audioPlayer .audioPlayerList .debugToggle {
-            cursor: pointer;
-            color: red;
-        }
-
-        .audioPlayer .audioPlayerUI {
-            margin-top: 1.5rem;
-            will-change: transform, filter;
-            -webkit-transition: 0.5s;
-            transition: 0.5s;
-        }
-
-        .audioPlayer .audioPlayerUI.isDisabled {
-            -webkit-transform: scale(0.75) translateX(100%);
-            transform: scale(0.75) translateX(100%);
-            -webkit-filter: blur(5px) grayscale(100%);
-            filter: blur(5px) grayscale(100%);
-        }
 
         .audioPlayer .audioPlayerUI .albumDetails {
             text-align: center;

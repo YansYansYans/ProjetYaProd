@@ -57,7 +57,9 @@ header {
 .header-device {
   display: none;
 }
-
+.list {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
 @media all and (max-width: 650px) {
   .header-device {
     display: flex;
@@ -100,10 +102,6 @@ header {
       font-size: 1.2em;
     }
   }
-  .audioPlayer {
-
-    margin-top: 0px;
-}
 }
 
 .body-music {
