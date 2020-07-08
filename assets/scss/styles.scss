@@ -57,9 +57,7 @@ header {
 .header-device {
   display: none;
 }
-.list {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-}
+
 @media all and (max-width: 650px) {
   .header-device {
     display: flex;
@@ -68,12 +66,15 @@ header {
     bottom: 0;
     z-index: 100;
     width: 100%;
+    margin-left: -10px;
     & a {
       text-decoration: none;
+      color: white;
       & i {
         font-size: 1.5em;
         color: white;
         padding-bottom: -50px;
+
       }
       & h6 {
         margin-top: 8px;

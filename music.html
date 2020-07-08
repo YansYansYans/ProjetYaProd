@@ -85,11 +85,11 @@
                 <div class="currentProgress" :style="{ width: currentProgressBar + '%' }"></div>
             </div>
         </div>
-        <div class="list">
-            <div class="list2" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }"
+        <div class="audioPlayerList" :class="{'isActive': isPlaylistActive}">
+            <div class="item" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }"
                 v-on:click="changeSong(index),isPlaylistActive=!isPlaylistActive">
-                <p class="title2">{{ item.title }}</p>
-                <p class="artist2">{{ item.artist }}</p>
+                <p class="title">{{ item.title }}</p>
+                <p class="artist">{{ item.artist }}</p>
             </div>
         </div>
     </main>
@@ -116,6 +116,7 @@
     <style>
         @import url("https://fonts.googleapis.com/css?family=Inconsolata:400,700");
         @import url("https://fonts.googleapis.com/css?family=Raleway:400,400i,700");
+
         * {
             box-sizing: border-box;
         }
@@ -139,6 +140,7 @@
             user-select: none;
             margin-top: 200px;
         }
+
         .audioPlayer .nav-icon {
             width: 15px;
             height: 12px;
@@ -195,18 +197,42 @@
             -webkit-transform: rotate(-135deg);
             transform: rotate(-135deg);
         }
-        .list {
+
+        .audioPlayer .audioPlayerList {
             margin-top: 50px;
             text-align: center;
         }
-        .list2 {
+
+        .audioPlayer .audioPlayerList.isActive {
+            -webkit-transform: translateX(0);
+            transform: translateX(0);
+        }
+
+        .audioPlayer .audioPlayerList .item {
             margin-bottom: 40px;
-        }
-        .list2 .title2 {
-            font-size: 1.7em;
+            -webkit-transition: 0.2s;
+            transition: 0.2s;
         }
 
+        .audioPlayer .audioPlayerList .item:hover {
+            padding-left: 0.5rem;
+            cursor: pointer;
+        }
 
+        .audioPlayer .audioPlayerList .item .title {
+            color: rgb(180, 123, 0);
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .audioPlayer .audioPlayerList .item .artist {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .audioPlayer .audioPlayerList .item.isActive {
+            opacity: 60%;
+        }
         .audioPlayer .audioPlayerUI .albumDetails {
             text-align: center;
             margin: 2rem 0;
@@ -354,6 +380,7 @@
         .fade-leave-to {
             opacity: 0;
         }
+
         @media all and (max-width: 650px) {
             .audioPlayer {
                 margin-top: 0px;
