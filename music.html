@@ -13,11 +13,12 @@
         integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="assets/scss/styles.css">
     <link href="img/logo.ico" rel="shortcut icon" />
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.5.6/plyr.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5media/1.1.8/html5media.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.5.6/plyr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.7.3/feather.min.js"></script>
 
 </head>
 
@@ -42,26 +43,65 @@
         </nav>
     </header>
 
-    <main class="container">
-        <div class="column add-bottom">
-            <div id="mainwrap">
-                <div class="title-all-music">
-                    <h2>
-                        ALL MUSIC
-                    </h2>
-                </div>
-                <div id="plwrap">
-                    <ul id="plList"></ul>
-                </div>
+    <main class="audioPlayer" id="app">
+        <a class="nav-icon" v-on:click="isPlaylistActive=!isPlaylistActive" :class="{'isActive': isPlaylistActive}"
+            title="Music List">
+            <span></span>
+            <span></span>
+            <span></span>
+        </a>
+        <div class="audioPlayerList" :class="{'isActive': isPlaylistActive}">
+            <div class="item" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }"
+                v-on:click="changeSong(index),isPlaylistActive=!isPlaylistActive">
+                <p class="title">{{ item.title }}</p>
+                <p class="artist">{{ item.artist }}</p>
+            </div>
+
+            <p class="debugToggle" v-on:click="toggleDebug()">debug: {{ debug }}</p>
+
+        </div>
+        <div class="audioPlayerUI" :class="{'isDisabled': isPlaylistActive}">
+            <div class="albumImage">
+                <transition name="ballmove" enter-active-class="animated zoomIn"
+                    leave-active-class="animated fadeOutDown" mode="out-in">
+                    <!--<transition name="slide-fade" mode="out-in">-->
+                    <img @load="onImageLoaded()" :src="musicPlaylist[currentSong].image" :key="currentSong"
+                        ondragstart="return false;" id="playerAlbumArt">
+                </transition>
+                <div class="loader" :key="currentSong">Loading...</div>
+            </div>
+            <div class="albumDetails">
+                <transition name="slide-fade" mode="out-in">
+                    <p class="title" :key="currentSong">{{ musicPlaylist[currentSong].title }}</p>
+                </transition>
+                <transition name="slide-fade" mode="out-in">
+                    <p class="artist" :key="currentSong">{{ musicPlaylist[currentSong].artist }}</p>
+            </div>
+
+            <div class="playerButtons">
+                <a class="button" :class="{'isDisabled':(currentSong==0)}" v-on:click="prevSong()"
+                    title="Previous Song"><i class="zmdi zmdi-skip-previous"></i></a>
+                <a class="button play" v-on:click="playAudio()" title="Play/Pause Song">
+                    <transition name="slide-fade" mode="out-in">
+                        <i class="zmdi"
+                            :class="[currentlyStopped ? 'zmdi-stop' : (currentlyPlaying ? 'zmdi-pause-circle' : 'zmdi-play-circle')]"
+                            :key="1"></i>
+                    </transition>
+                </a>
+                <a class="button" :class="{'isDisabled':(currentSong==musicPlaylist.length-1)}" v-on:click="nextSong()"
+                    title="Next Song"><i class="zmdi zmdi-skip-next"></i></a>
+            </div>
+
+            <div class="currentTimeContainer" style="text-align:center">
+                <span class="currentTime">{{ currentTime | fancyTimeFormat }}</span>
+                <span class="totalTime"> {{ trackDuration | fancyTimeFormat }}</span>
+            </div>
+
+            <div class="currentProgressBar">
+                <div class="currentProgress" :style="{ width: currentProgressBar + '%' }"></div>
             </div>
         </div>
     </main>
-
-    <div id="audiowrap">
-        <div id="audio0">
-            <audio id="audio1" preload controls>Your browser does not support HTML5 Audio! 😢</audio>
-        </div>
-    </div>
 
     <div class="header-device header-device-music">
         <a href="index.html">
@@ -82,157 +122,488 @@
         </a>
     </div>
 
+    <style>
+        @import url("https://fonts.googleapis.com/css?family=Inconsolata:400,700");
+        @import url("https://fonts.googleapis.com/css?family=Raleway:400,400i,700");
+
+        .debug main * {
+            outline: solid 0.25rem rgba(255, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .animated {
+            -webkit-animation-duration: 0.5s;
+            animation-duration: 0.5s;
+        }
+
+        .audioPlayer {
+            position: relative;
+            min-height: 25rem;
+            width: 100%;
+            overflow: hidden;
+            padding: 1.5rem;
+            margin: 0 auto;
+            border-radius: 0.5rem;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            margin-top: 200px;
+        }
+        .audioPlayer .nav-icon {
+            width: 15px;
+            height: 12px;
+            position: absolute;
+            top: 1.125rem;
+            left: 1.5rem;
+            -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+            -webkit-transition: 0.25s ease-in-out;
+            transition: 0.25s ease-in-out;
+            cursor: pointer;
+        }
+
+        .audioPlayer .nav-icon span {
+            display: block;
+            position: absolute;
+            height: 2px;
+            width: 100%;
+            background: white;
+            border-radius: 6px;
+            opacity: 1;
+            left: 0;
+            -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+            -webkit-transition: 0.5s ease-in-out;
+            transition: 0.5s ease-in-out;
+        }
+
+        .audioPlayer .nav-icon span:nth-child(1) {
+            top: 0px;
+        }
+
+        .audioPlayer .nav-icon span:nth-child(2) {
+            top: 5px;
+        }
+
+        .audioPlayer .nav-icon span:nth-child(3) {
+            top: 10px;
+        }
+
+        .audioPlayer .nav-icon.isActive span:nth-child(1) {
+            top: 5px;
+            -webkit-transform: rotate(135deg);
+            transform: rotate(135deg);
+        }
+
+        .audioPlayer .nav-icon.isActive span:nth-child(2) {
+            opacity: 0;
+            left: -60px;
+        }
+
+        .audioPlayer .nav-icon.isActive span:nth-child(3) {
+            top: 5px;
+            -webkit-transform: rotate(-135deg);
+            transform: rotate(-135deg);
+        }
+
+        .audioPlayer .audioPlayerList {
+            color: white;
+            width: 17rem;
+            -webkit-transition: 0.5s;
+            transition: 0.5s;
+            -webkit-transform: translateX(-200%);
+            transform: translateX(-200%);
+            position: absolute;
+            margin-top: 1.5rem;
+            overflow: auto;
+            z-index: 10;
+            will-change: transform;
+        }
+
+        .audioPlayer .audioPlayerList.isActive {
+            -webkit-transform: translateX(0);
+            transform: translateX(0);
+        }
+
+        .audioPlayer .audioPlayerList .item {
+            margin-bottom: 1.5rem;
+            border-left: 0.1rem solid transparent;
+            -webkit-transition: 0.2s;
+            transition: 0.2s;
+        }
+
+        .audioPlayer .audioPlayerList .item:hover {
+            padding-left: 0.5rem;
+            cursor: pointer;
+        }
+
+        .audioPlayer .audioPlayerList .item .title {
+            color: rgb(180, 123, 0);
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .audioPlayer .audioPlayerList .item .artist {
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .audioPlayer .audioPlayerList .item.isActive {
+            border-left-color: rgb(180, 123, 0);
+            padding-left: 1rem;
+        }
+
+        .audioPlayer .audioPlayerList .debugToggle {
+            cursor: pointer;
+            color: red;
+        }
+
+        .audioPlayer .audioPlayerUI {
+            margin-top: 1.5rem;
+            will-change: transform, filter;
+            -webkit-transition: 0.5s;
+            transition: 0.5s;
+        }
+
+        .audioPlayer .audioPlayerUI.isDisabled {
+            -webkit-transform: scale(0.75) translateX(100%);
+            transform: scale(0.75) translateX(100%);
+            -webkit-filter: blur(5px) grayscale(100%);
+            filter: blur(5px) grayscale(100%);
+        }
+
+        .audioPlayer .audioPlayerUI .albumDetails {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .audioPlayer .audioPlayerUI .albumDetails p {
+            margin: 0px;
+        }
+
+        .audioPlayer .audioPlayerUI .albumDetails p.title {
+            font-size: 2.5rem;
+            color: rgb(180, 123, 0);
+        }
+
+        .audioPlayer .audioPlayerUI .albumDetails p.artist {
+            margin-top: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: none;
+            color: white;
+            -webkit-transition-delay: 100ms;
+            transition-delay: 100ms;
+        }
+
+        .audioPlayer .audioPlayerUI .albumImage {
+            width: 17rem;
+            height: 17rem;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .audioPlayer .audioPlayerUI .albumImage img {
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            -o-object-fit: cover;
+            object-fit: cover;
+            -o-object-position: 50% 50%;
+            object-position: 50% 50%;
+            border-radius: 0.5rem;
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons {
+            position: relative;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons .button {
+            font-size: 2rem;
+            display: inline-block;
+            vertical-align: middle;
+            padding: 0.5rem;
+            margin: 0 0.25rem;
+            color: white;
+            border-radius: 50%;
+            outline: 0;
+            text-decoration: none;
+            cursor: pointer;
+            -webkit-transition: 0.5s;
+            transition: 0.5s;
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons .button.play {
+            font-size: 4rem;
+            margin: 0 1.5rem;
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons .button:active {
+            opacity: 0.75;
+            -webkit-transform: scale(0.75);
+            transform: scale(0.75);
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons .button.isDisabled {
+            color: white;
+            cursor: initial;
+        }
+
+        .audioPlayer .audioPlayerUI .playerButtons .button.isDisabled:active {
+            -webkit-transform: none;
+            transform: none;
+        }
+
+        .audioPlayer .audioPlayerUI .currentTimeContainer {
+            width: 100%;
+            height: 1rem;
+            display: -webkit-box;
+            display: flex;
+            -webkit-box-pack: justify;
+            justify-content: space-between;
+        }
+
+        .audioPlayer .audioPlayerUI .currentTimeContainer .currentTime,
+        .audioPlayer .audioPlayerUI .currentTimeContainer .totalTime {
+            font-size: 1rem;
+            font-family: monospace;
+            color: white;
+        }
+
+        .audioPlayer .audioPlayerUI .currentProgressBar {
+            width: 100%;
+            background-color: white;
+            margin: 0.75rem 0;
+        }
+
+        .audioPlayer .audioPlayerUI .currentProgressBar .currentProgress {
+            background-color: white;
+            width: 0px;
+            height: 1px;
+            -webkit-transition: 100ms;
+            transition: 100ms;
+        }
+
+        .loader {
+            margin: 60px auto;
+            font-size: 10px;
+            position: relative;
+            text-indent: -9999em;
+        }
+
+        .slide-fade-enter-active {
+            -webkit-transition: all 0.3s ease;
+            transition: all 0.3s ease;
+        }
+
+        .slide-fade-leave-active {
+            -webkit-transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+            transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+        }
+
+        .slide-fade-enter,
+        .slide-fade-leave-to {
+            -webkit-transform: translateY(10px);
+            transform: translateY(10px);
+            opacity: 0;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            -webkit-transition: opacity 0.5s;
+            transition: opacity 0.5s;
+        }
+
+        .fade-enter,
+        .fade-leave-to {
+            opacity: 0;
+        }
+        @media all and (max-width: 650px) {
+            .audioPlayer {
+                margin-top: 0px;
+            }
+        }
+    </style>
+
     <script>
-        jQuery(function ($) {
-            'use strict'
-            var supportsAudio = !!document.createElement('audio').canPlayType;
-            if (supportsAudio) {
-                var player = new Plyr('#audio1', {
-                    controls: [
-                        'restart',
-                        'play',
-                        'progress',
-                        'current-time',
-                        'duration',
-                        'mute',
-                        'volume',
-                        'download'
-                    ]
-                });
-                // initialize playlist and controls
-                var index = 0,
-                    playing = false,
-                    mediaPath = 'https://archive.org/download/yaprod/',
-                    extension = '',
-                    tracks = [{
-                        "track": 1,
-                        "name": "PLAYA - by YaProd",
-                        "duration": "3:46",
-                        "file": "PLAYA"
-                    }, {
-                        "track": 2,
-                        "name": "TIMBALE - by YaProd",
-                        "duration": "5:50",
-                        "file": "TIMBALE"
-                    }, {
-                        "track": 3,
-                        "name": "SALSA - by YaProd",
-                        "duration": "3:10",
-                        "file": "SALSA"
-                    }, {
-                        "track": 4,
-                        "name": "PROJET D - by YaProd (Remastering DXNNY)",
-                        "duration": "3:22",
-                        "file": "PROJET D"
-                    }, {
-                        "track": 5,
-                        "name": "THIS IS MY STORY - by YaProd",
-                        "duration": "3:06",
-                        "file": "THIS IS MY STORY"
-                    }, {
-                        "track": 6,
-                        "name": "VALLEY - by YaProd",
-                        "duration": "3:12",
-                        "file": "VALLEY"
-                    }, {
-                        "track": 7,
-                        "name": "COMMENCEMENT - YaProd",
-                        "duration": "3:31",
-                        "file": "COMMENCEMENT"
-                    }],
-                    buildPlaylist = $.each(tracks, function (key, value) {
-                        var trackNumber = value.track,
-                            trackName = value.name,
-                            trackDuration = value.duration;
-                        if (trackNumber.toString().length === 1) {
-                            trackNumber = '0' + trackNumber;
-                        }
-                        $('#plList').append('<li> \
-                      <div class="plItem"> \
-                          <span class="plNum">' + trackNumber + '.</span> \
-                          <span class="plTitle">' + trackName + '</span> \
-                          <span class="plLength">' + trackDuration + '</span> \
-                      </div> \
-                  </li>');
-                    }),
-                    trackCount = tracks.length,
-                    npAction = $('#npAction'),
-                    npTitle = $('#npTitle'),
-                    audio = $('#audio1').on('play', function () {
-                        playing = true;
-                        npAction.text('Now Playing...');
-                    }).on('pause', function () {
-                        playing = false;
-                        npAction.text('Paused...');
-                    }).on('ended', function () {
-                        npAction.text('Paused...');
-                        if ((index + 1) < trackCount) {
-                            index++;
-                            loadTrack(index);
-                            audio.play();
-                        } else {
-                            audio.pause();
-                            index = 0;
-                            loadTrack(index);
-                        }
-                    }).get(0),
-                    btnPrev = $('#btnPrev').on('click', function () {
-                        if ((index - 1) > -1) {
-                            index--;
-                            loadTrack(index);
-                            if (playing) {
-                                audio.play();
-                            }
-                        } else {
-                            audio.pause();
-                            index = 0;
-                            loadTrack(index);
-                        }
-                    }),
-                    btnNext = $('#btnNext').on('click', function () {
-                        if ((index + 1) < trackCount) {
-                            index++;
-                            loadTrack(index);
-                            if (playing) {
-                                audio.play();
-                            }
-                        } else {
-                            audio.pause();
-                            index = 0;
-                            loadTrack(index);
-                        }
-                    }),
-                    li = $('#plList li').on('click', function () {
-                        var id = parseInt($(this).index());
-                        if (id !== index) {
-                            playTrack(id);
-                        }
-                    }),
-                    loadTrack = function (id) {
-                        $('.plSel').removeClass('plSel');
-                        $('#plList li:eq(' + id + ')').addClass('plSel');
-                        npTitle.text(tracks[id].name);
-                        index = id;
-                        audio.src = mediaPath + tracks[id].file + extension;
-                        updateDownload(id, audio.src);
+        var app = new Vue({
+            el: "#app",
+            data: {
+                audio: "",
+                imgLoaded: false,
+                currentlyPlaying: false,
+                currentlyStopped: false,
+                currentTime: 0,
+                checkingCurrentPositionInTrack: "",
+                trackDuration: 0,
+                currentProgressBar: 0,
+                isPlaylistActive: false,
+                currentSong: 0,
+                debug: false,
+                musicPlaylist: [{
+                        title: "PLAYA",
+                        artist: "by YaProd",
+                        url: "img/PLAYA.mp3",
+                        image: "img/playa.jpg"
                     },
-                    updateDownload = function (id, source) {
-                        player.on('loadedmetadata', function () {
-                            $('a[data-plyr="download"]').attr('href', source);
-                        });
+                    {
+                        title: "TIMBALE",
+                        artist: "by YaProd",
+                        url: "img/TIMBALE.mp3",
+                        image: "img/timbale.jpg"
                     },
-                    playTrack = function (id) {
-                        loadTrack(id);
-                        audio.play();
-                    };
-                extension = audio.canPlayType('audio/mpeg') ? '.mp3' : audio.canPlayType('audio/ogg') ? '.ogg' :
-                    '';
-                loadTrack(index);
-            } else {
-                // no audio support
-                $('.column').addClass('hidden');
-                var noSupport = $('#audio1').text();
-                $('.container').append('<p class="no-support">' + noSupport + '</p>');
+                    {
+                        title: "SALSA",
+                        artist: "by YaProd",
+                        url: "img/SALSA.mp3",
+                        image: "img/salsa.jpg"
+                    },
+                    {
+                        title: "PROJET D",
+                        artist: "by YaProd Remastering DXNNY",
+                        url: "img/PROJET D.mp3",
+                        image: "img/d.png"
+                    },
+                    {
+                        title: "VALLEY",
+                        artist: "by YaProd",
+                        url: "img/VALLEY.mp3",
+                        image: "img/valley.jpg"
+                    },
+                    {
+                        title: "COMMENCEMENT",
+                        artist: "by YaProd",
+                        url: "img/COMMENCEMENT.mp3",
+                        image: "img/commencement.jpg"
+                    },
+                    {
+                        title: "THIS IS MY STORY",
+                        artist: "by YaProd",
+                        url: "img/THIS IS MY STORY.mp3",
+                        image: "img/story.jpg"
+                    }
+                ],
+                audioFile: ""
+            },
+            mounted: function () {
+                this.changeSong();
+                this.audio.loop = false;
+            },
+            filters: {
+                fancyTimeFormat: function (s) {
+                    return (s - (s %= 60)) / 60 + (9 < s ? ":" : ":0") + s;
+                }
+            },
+            methods: {
+                togglePlaylist: function () {
+                    this.isPlaylistActive = !this.isPlaylistActive;
+                },
+                nextSong: function () {
+                    if (this.currentSong < this.musicPlaylist.length - 1)
+                        this.changeSong(this.currentSong + 1);
+                },
+                prevSong: function () {
+                    if (this.currentSong > 0) this.changeSong(this.currentSong - 1);
+                },
+                changeSong: function (index) {
+                    var wasPlaying = this.currentlyPlaying;
+                    this.imageLoaded = false;
+                    if (index !== undefined) {
+                        this.stopAudio();
+                        this.currentSong = index;
+                    }
+                    this.audioFile = this.musicPlaylist[this.currentSong].url;
+                    this.audio = new Audio(this.audioFile);
+                    var localThis = this;
+                    this.audio.addEventListener("loadedmetadata", function () {
+                        localThis.trackDuration = Math.round(this.duration);
+                    });
+                    this.audio.addEventListener("ended", this.handleEnded);
+                    if (wasPlaying) {
+                        this.playAudio();
+                    }
+                },
+                isCurrentSong: function (index) {
+                    if (this.currentSong == index) {
+                        return true;
+                    }
+                    return false;
+                },
+                getCurrentSong: function (currentSong) {
+                    return this.musicPlaylist[currentSong].url;
+                },
+                playAudio: function () {
+                    if (
+                        this.currentlyStopped == true &&
+                        this.currentSong + 1 == this.musicPlaylist.length
+                    ) {
+                        this.currentSong = 0;
+                        this.changeSong();
+                    }
+                    if (!this.currentlyPlaying) {
+                        this.getCurrentTimeEverySecond(true);
+                        this.currentlyPlaying = true;
+                        this.audio.play();
+                    } else {
+                        this.stopAudio();
+                    }
+                    this.currentlyStopped = false;
+                },
+                stopAudio: function () {
+                    this.audio.pause();
+                    this.currentlyPlaying = false;
+                    this.pausedMusic();
+                },
+                handleEnded: function () {
+                    if (this.currentSong + 1 == this.musicPlaylist.length) {
+                        this.stopAudio();
+                        this.currentlyPlaying = false;
+                        this.currentlyStopped = true;
+                    } else {
+                        this.currentlyPlaying = false;
+                        this.currentSong++;
+                        this.changeSong();
+                        this.playAudio();
+                    }
+                },
+                onImageLoaded: function () {
+                    this.imgLoaded = true;
+                },
+                getCurrentTimeEverySecond: function (startStop) {
+                    var localThis = this;
+                    this.checkingCurrentPositionInTrack = setTimeout(
+                        function () {
+                            localThis.currentTime = localThis.audio.currentTime;
+                            localThis.currentProgressBar =
+                                localThis.audio.currentTime / localThis.trackDuration * 100;
+                            localThis.getCurrentTimeEverySecond(true);
+                        }.bind(this),
+                        1000
+                    );
+                },
+                pausedMusic: function () {
+                    clearTimeout(this.checkingCurrentPositionInTrack);
+                },
+                toggleDebug: function () {
+                    this.debug = !this.debug;
+                    document.body.classList.toggle('debug');
+                }
+            },
+            watch: {
+                currentTime: function () {
+                    this.currentTime = Math.round(this.currentTime);
+                }
+            },
+            beforeDestroy: function () {
+                this.audio.removeEventListener("ended", this.handleEnded);
+                this.audio.removeEventListener("loadedmetadata", this.handleEnded);
+
+                clearTimeout(this.checkingCurrentPositionInTrack);
             }
         });
     </script>

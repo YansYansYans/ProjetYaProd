@@ -1,1299 +1,565 @@
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.5.0/css/swiper.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.5.0/js/swiper.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.5.0/js/swiper.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
-<!-- about -->
-<div class="about">
-  <a class="bg_links social portfolio" href="https://www.rafaelalucas.com" target="_blank">
-     <span class="icon"></span>
-  </a>
-  <a class="bg_links social dribbble" href="https://dribbble.com/rafaelalucas" target="_blank">
-     <span class="icon"></span>
-  </a>
-  <a class="bg_links social linkedin" href="https://www.linkedin.com/in/rafaelalucas/" target="_blank">
-     <span class="icon"></span>
-  </a>
-  <a class="bg_links logo"></a>
-</div>
-<!-- end about -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.7.3/feather.min.js"></script>
+</head>
+<body>
+  
 
-<div class="wrapper">
-  <div class="content">
-     <div class="topContent">
-        <div class="menuBar">
-           <div class="icon topExpand"></div>
-           <p class="appName">Your Library</p>
-           <div class="icon menuHamburguer"></div>
-        </div>
-        <div class="musicGroups">
-           <!-- Slider main container -->
-           <div class="swiper-container slider-two">
-              <!-- Additional required wrapper -->
-              <div class="swiper-wrapper slider-two">
-              </div>
 
-           </div>
-           <!-- end Slider main container -->
 
-        </div>
+<main class="audioPlayer" id="app">
+	<a class="nav-icon" v-on:click="isPlaylistActive=!isPlaylistActive" :class="{'isActive': isPlaylistActive}" title="Music List">
+		  <span></span>
+		  <span></span>
+		  <span></span>
+		</a>
+	<div class="audioPlayerList" :class="{'isActive': isPlaylistActive}">
+		<div class="item" v-for="(item,index) in musicPlaylist" v-bind:class="{ 'isActive':isCurrentSong(index) }" v-on:click="changeSong(index),isPlaylistActive=!isPlaylistActive">
+			<p class="title">{{ item.title }}</p>
+			<p class="artist">{{ item.artist }}</p>
+		</div>
+		
+			<p class="debugToggle" v-on:click="toggleDebug()">debug: {{ debug }}</p>
 
-     </div>
-     <div class="middleContent">
+	</div>
+	<div class="audioPlayerUI" :class="{'isDisabled': isPlaylistActive}">
+		<div class="albumImage">
+			<transition name="ballmove" enter-active-class="animated zoomIn" leave-active-class="animated fadeOutDown" mode="out-in">
+				<!--<transition name="slide-fade" mode="out-in">-->
+				<img @load="onImageLoaded()" :src="musicPlaylist[currentSong].image" :key="currentSong" ondragstart="return false;" id="playerAlbumArt">
+			</transition>
+			<div class="loader" :key="currentSong">Loading...</div>
+		</div>
+		<div class="albumDetails">
+			<transition name="slide-fade" mode="out-in">
+				<p class="title" :key="currentSong">{{ musicPlaylist[currentSong].title }}</p>
+			</transition>
+			<transition name="slide-fade" mode="out-in">
+				<p class="artist" :key="currentSong">{{ musicPlaylist[currentSong].artist }}</p>
+		</div>
 
-        <!-- Slider main container -->
-        <div class="swiper-container slider-one">
-           <!-- Additional required wrapper -->
-           <div class="swiper-wrapper slider-one">
-           </div>
-        </div>
-        <!-- end Slider main container -->
-     </div>
-     <div class="bottomContent">
-        <div class="icon bottomExpand"></div>
-        <div class="progressBar">
-           <div class="timer">
-              <span class="currentTime">00:00</span>
-              <span class="endTime"></span>
-           </div>
-           <div class="barTimer"><span class="progress"></span></div>
-        </div>
-        <div class="player">
-           <div class="icon shuffle"></div>
-           <div class="icon prev swiper-button-prev"></div>
-           <div class="btnPlay">
-              <div class="icon play"></div>
-           </div>
-           <div class="icon next swiper-button-next"></div>
-           <div class="icon repeat"></div>
+		<div class="playerButtons">
+			<a class="button" :class="{'isDisabled':(currentSong==0)}" v-on:click="prevSong()" title="Previous Song"><i class="zmdi zmdi-skip-previous"></i></a>
+			<a class="button play" v-on:click="playAudio()" title="Play/Pause Song">
+				<transition name="slide-fade" mode="out-in">
+					<i class="zmdi" :class="[currentlyStopped ? 'zmdi-stop' : (currentlyPlaying ? 'zmdi-pause-circle' : 'zmdi-play-circle')]" :key="1"></i>
+				</transition>
+			</a>
+			<a class="button" :class="{'isDisabled':(currentSong==musicPlaylist.length-1)}" v-on:click="nextSong()" title="Next Song"><i class="zmdi zmdi-skip-next"></i></a>
+		</div>
 
-        </div>
-     </div>
+		<div class="currentTimeContainer" style="text-align:center">
+			<span class="currentTime">{{ currentTime | fancyTimeFormat }}</span>
+			<span class="totalTime"> {{ trackDuration | fancyTimeFormat }}</span>
+			<!--<span style="color:black">({{ currentSong+1 }}/{{ musicPlaylist.length }})</span>-->
+		</div>
 
-     <div class="albumBg">
-        <figure class="bg"><img class="imageBg" src="" alt=""></figure>
-     </div>
+		<div class="currentProgressBar">
+			<div class="currentProgress" :style="{ width: currentProgressBar + '%' }"></div>
+		</div>
+	</div>
 
-  </div>
-  <div class="bodyBg"></div>
-</div>
+</main>
 
 
 <style>
-  @import url("https://fonts.googleapis.com/css?family=Barlow+Condensed:300,400,500,600,700,800,900|Barlow:300,400,500,600,700,800,900&display=swap");
-.about {
-  position: fixed;
-  z-index: 10;
-  bottom: 10px;
-  right: 10px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-  transition: all 0.2s ease;
-}
-@media screen and (max-width: 640px) {
-  .about {
-    display: none;
-  }
-}
-.about .bg_links {
-  width: 40px;
-  height: 40px;
-  border-radius: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 100%;
-  backdrop-filter: blur(5px);
-  position: absolute;
-}
-.about .logo {
-  width: 40px;
-  height: 40px;
-  z-index: 9;
-  background-image: url(https://rafaelavlucas.github.io/assets/codepen/logo_white.svg);
-  background-size: 50%;
-  background-repeat: no-repeat;
-  background-position: 10px 7px;
-  opacity: 0.9;
-  transition: all 1s 0.2s ease;
-  bottom: 0;
-  right: 0;
-}
-.about .social {
-  opacity: 0;
-  right: 0;
-  bottom: 0;
-}
-.about .social .icon {
-  width: 100%;
-  height: 100%;
-  background-size: 20px;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-color: transparent;
-  display: flex;
-  transition: all 0.2s ease, background-color 0.4s ease;
-  opacity: 0;
-  border-radius: 100%;
-}
-.about .social.portfolio {
-  transition: all 0.8s ease;
-}
-.about .social.portfolio .icon {
-  background-image: url(https://rafaelavlucas.github.io/assets/codepen/link.svg);
-}
-.about .social.dribbble {
-  transition: all 0.3s ease;
-}
-.about .social.dribbble .icon {
-  background-image: url(https://rafaelavlucas.github.io/assets/codepen/dribbble.svg);
-}
-.about .social.linkedin {
-  transition: all 0.8s ease;
-}
-.about .social.linkedin .icon {
-  background-image: url(https://rafaelavlucas.github.io/assets/codepen/linkedin.svg);
-}
-.about:hover {
-  width: 105px;
-  height: 105px;
-  transition: all 0.6s cubic-bezier(0.64, 0.01, 0.07, 1.65);
-}
-.about:hover .logo {
-  opacity: 1;
-  transition: all 0.6s ease;
-}
-.about:hover .social {
-  opacity: 1;
-}
-.about:hover .social .icon {
-  opacity: 0.9;
-}
-.about:hover .social:hover {
-  background-size: 28px;
-}
-.about:hover .social:hover .icon {
-  background-size: 65%;
-  opacity: 1;
-}
-.about:hover .social.portfolio {
-  right: 0;
-  bottom: calc(100% - 40px);
-  transition: all 0.3s 0s cubic-bezier(0.64, 0.01, 0.07, 1.65);
-}
-.about:hover .social.portfolio .icon:hover {
-  background-color: #698fb7;
-}
-.about:hover .social.dribbble {
-  bottom: 45%;
-  right: 45%;
-  transition: all 0.3s 0.15s cubic-bezier(0.64, 0.01, 0.07, 1.65);
-}
-.about:hover .social.dribbble .icon:hover {
-  background-color: #ea4c89;
-}
-.about:hover .social.linkedin {
-  bottom: 0;
-  right: calc(100% - 40px);
-  transition: all 0.3s 0.25s cubic-bezier(0.64, 0.01, 0.07, 1.65);
-}
-.about:hover .social.linkedin .icon:hover {
-  background-color: #0077b5;
+  @import url("https://fonts.googleapis.com/css?family=Inconsolata:400,700");
+@import url("https://fonts.googleapis.com/css?family=Raleway:400,400i,700");
+/* Debugging */
+.debug main * {
+  outline: solid 0.25rem rgba(255, 0, 0, 0.25);
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 0;
-  -webkit-tap-highlight-color: transparent;
-  text-decoration: none;
-  color: inherit;
-}
-*:focus {
-  outline: 0;
+  box-sizing: border-box;
 }
 
-.wrapper {
-  display: grid;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-family: "Barlow", sans-serif;
-  user-select: none;
-  letter-spacing: 0.8px;
+.animated {
+  -webkit-animation-duration: 0.5s;
+          animation-duration: 0.5s;
 }
-@media screen and (max-height: 600px) {
-  .wrapper {
-    height: 100% !important;
-    min-height: 600px;
-  }
-}
-.wrapper .content {
-  width: 375px;
-  height: 760px;
-  margin: 60px 0;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+
+.audioPlayer {
   position: relative;
-  box-shadow: 0px 30px 80px rgba(0, 0, 0, 0.3);
-}
-@media screen and (max-width: 640px) {
-  .wrapper .content {
-    width: 100%;
-    height: 100%;
-    border-radius: 0px;
-    margin-bottom: 0px;
-    margin: 0px 0;
-  }
-}
-.wrapper .content .icon {
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.wrapper .content .icon:before {
-  position: absolute;
-  content: "";
-  width: 24px;
-  height: 24px;
-  z-index: 1;
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.wrapper .content .icon:active:before {
-  width: 28px;
-  height: 28px;
-}
-.wrapper .content .icon.shuffle:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/shuffle.svg");
-  opacity: 0.5;
-}
-.wrapper .content .icon.prev:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/prev.svg");
-}
-.wrapper .content .icon.play:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/play.svg");
-}
-.wrapper .content .icon.next:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/next.svg");
-}
-.wrapper .content .icon.repeat:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/repeat.svg");
-  opacity: 0.5;
-}
-.wrapper .content .icon.bottomExpand {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/arrow-down.svg");
-}
-.wrapper .content .icon.topExpand {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/arrow-down.svg");
-}
-.wrapper .content .icon.menuHamburguer {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/menu.svg");
-}
-.wrapper .content .icon.plus:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/plus.svg");
-}
-.wrapper .content .icon.heart:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/heart.svg");
-}
-.wrapper .content .icon.heart.fave:before {
-  animation: fave 0.3s ease;
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/fave.svg");
-}
-@keyframes fave {
-  50% {
-    width: 40px;
-    height: 40px;
-  }
-  100% {
-    width: 24px;
-    height: 24px;
-  }
-}
-.wrapper .content .icon.close:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/close.svg");
-}
-.wrapper .content .topContent {
-  width: 100%;
-  max-height: 60px;
-  background-color: rgba(232, 232, 240, 0.5);
-  display: flex;
-  justify-content: space-between;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 0;
-  box-sizing: border-box;
-  backdrop-filter: blur(5px);
-  transition: all 0.4s 0.2s ease;
-}
-.wrapper .content .topContent .menuBar {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  box-sizing: border-box;
-}
-.wrapper .content .topContent .menuBar .appName {
-  font-weight: 600;
-  font-size: 16px;
-  text-transform: uppercase;
-}
-.wrapper .content .topContent .musicGroups {
-  width: 100%;
-  height: 80px;
-  margin-top: 25px;
-  opacity: 0;
-  transform: translateX(100px);
-  transition: all 0.4s ease;
-  visibility: hidden;
-  cursor: grab;
-}
-.wrapper .content .topContent .musicGroups:active {
-  cursor: grabbing;
-}
-.wrapper .content .topContent .musicGroups .swiper-slide {
-  width: 150px;
-  height: 80px;
-  margin-right: 20px;
-}
-.wrapper .content .topContent .musicGroups .swiper-slide:first-child {
-  margin-left: 20px;
-}
-.wrapper .content .topContent .musicGroups .group {
-  position: relative;
-  border-radius: 4px;
-  cursor: pointer;
+  background-color: #eceff1;
+  min-height: 25rem;
+  width: 20rem;
   overflow: hidden;
+  padding: 1.5rem;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 19px 38px rgba(0, 0, 0, 0.3), 0 15px 12px rgba(0, 0, 0, 0.22);
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
 }
-.wrapper .content .topContent .musicGroups .group:before {
+.audioPlayer .nav-icon {
+  width: 15px;
+  height: 12px;
   position: absolute;
-  content: "";
-  width: 100%;
-  height: 30px;
-  bottom: 0;
-  z-index: 2;
+  top: 1.125rem;
+  left: 1.5rem;
+  -webkit-transform: rotate(0deg);
+          transform: rotate(0deg);
+  -webkit-transition: 0.25s ease-in-out;
+  transition: 0.25s ease-in-out;
+  cursor: pointer;
 }
-.wrapper .content .topContent .musicGroups .group figure {
-  margin: 0;
-  height: 100%;
-  width: 100%;
-}
-.wrapper .content .topContent .musicGroups .group figure img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: grayscale(0.2);
-}
-.wrapper .content .topContent .musicGroups .group figure:before {
+.audioPlayer .nav-icon span {
+  display: block;
   position: absolute;
-  content: "";
+  height: 2px;
   width: 100%;
-  height: 100%;
-  background: linear-gradient(0deg, #252525 10%, transparent 100%);
-  top: 0;
-  left: 0;
-  opacity: 0.8;
-  z-index: 1;
-}
-.wrapper .content .topContent .musicGroups .group .titleGroup {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  text-align: center;
-  z-index: 3;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: uppercase;
-}
-.wrapper .content .topContent.expand {
-  max-height: 190px;
-  transition: all 0.4s ease;
-}
-.wrapper .content .topContent.expand .topExpand {
-  transform: rotate(180deg);
-}
-.wrapper .content .topContent.expand .musicGroups {
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
   opacity: 1;
-  transform: translateX(0px);
-  transition: all 0.4s 0.2s ease;
-  height: 100%;
-  visibility: visible;
-}
-.wrapper .content .middleContent {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-.wrapper .content .middleContent .albumContent {
-  margin: 40px 0 20px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-}
-.wrapper .content .middleContent .albumContent.small {
-  width: 200px;
-}
-.wrapper .content .middleContent .albumContent.small .albumCover {
-  width: 200px;
-  height: 200px;
-  transition: all 0.4s ease;
-}
-@media screen and (max-height: 600px) {
-  .wrapper .content .middleContent .albumContent {
-    width: 200px;
-  }
-  .wrapper .content .middleContent .albumContent .albumCover {
-    width: 200px;
-    height: 200px;
-    transition: all 0.4s ease;
-  }
-}
-.wrapper .content .middleContent .albumCover {
-  width: 280px;
-  height: 280px;
-  overflow: hidden;
-  box-shadow: 0px 30px 40px rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  position: relative;
-  transition: all 0.4s 0.2s ease;
-  z-index: -1;
-}
-.wrapper .content .middleContent .albumCover:before {
-  position: absolute;
-  content: "";
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8) -20%, transparent 50%);
-}
-.wrapper .content .middleContent .albumCover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: -1;
-}
-.wrapper .content .middleContent .artistName,
-.wrapper .content .middleContent .songName {
-  text-align: center;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 20px;
-  text-align: center;
-  letter-spacing: 0.04em;
-  z-index: 2;
-}
-.wrapper .content .middleContent .artistName {
-  text-transform: uppercase;
-  margin: 30px 0 10px 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.wrapper .content .middleContent .settings {
-  width: 100%;
-  height: 40px;
-  position: absolute;
-  top: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 20px 0 20px;
-  box-sizing: border-box;
-  position: fixed;
-  transition: all 0s ease;
-  transform: translateY(-100px);
-  opacity: 0;
-}
-.wrapper .content .middleContent .playlistsContent {
-  background-color: rgba(232, 232, 240, 0.6);
-  width: 100%;
-  height: 100%;
-  position: fixed;
   left: 0;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 60px 0 40px 0;
-  box-sizing: border-box;
-  backdrop-filter: blur(10px);
-  transform: translateY(calc(-100% - 60px));
-  transition: all 0.8s cubic-bezier(0.8, -0.02, 0.25, 1);
+  -webkit-transform: rotate(0deg);
+          transform: rotate(0deg);
+  -webkit-transition: 0.5s ease-in-out;
+  transition: 0.5s ease-in-out;
 }
-.wrapper .content .middleContent .playlistsContent .close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
+.audioPlayer .nav-icon span:nth-child(1) {
+  top: 0px;
 }
-.wrapper .content .middleContent .playlistsContent .playlist {
-  width: calc(100% - 40px);
-  height: 100px;
-  min-height: 60px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  align-items: center;
-  margin-bottom: 10px;
-  overflow: hidden;
-  position: relative;
-  border-radius: 8px;
-  z-index: 3;
-  transition: all 0.2s ease;
-  border: 0px solid white;
-  cursor: pointer;
-  opacity: 0.6;
+.audioPlayer .nav-icon span:nth-child(2) {
+  top: 5px;
 }
-.wrapper .content .middleContent .playlistsContent .playlist:last-child {
-  margin-bottom: 0;
-}
-.wrapper .content .middleContent .playlistsContent .playlist .checkbox {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 24px;
-  height: 24px;
-  background-color: rgba(255, 255, 255, 0.2);
-  z-index: 2;
-  position: absolute;
-  right: 10px;
+.audioPlayer .nav-icon span:nth-child(3) {
   top: 10px;
-  border-radius: 4px;
 }
-.wrapper .content .middleContent .playlistsContent .playlist .checkbox:before {
-  position: absolute;
-  content: "";
-  width: 0%;
-  height: 0%;
-  z-index: 1;
-  background-size: contain;
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/check.svg");
+.audioPlayer .nav-icon.isActive span:nth-child(1) {
+  top: 5px;
+  -webkit-transform: rotate(135deg);
+          transform: rotate(135deg);
+}
+.audioPlayer .nav-icon.isActive span:nth-child(2) {
   opacity: 0;
-  transition: all 0.2s cubic-bezier(0.6, 0.02, 0.18, 1.25);
+  left: -60px;
 }
-.wrapper .content .middleContent .playlistsContent .playlist .playlistThumb {
-  width: 80px;
-  height: calc(100% - 20px);
-  border-radius: 4px;
+.audioPlayer .nav-icon.isActive span:nth-child(3) {
+  top: 5px;
+  -webkit-transform: rotate(-135deg);
+          transform: rotate(-135deg);
+}
+.audioPlayer .audioPlayerList {
+  color: rgba(0, 0, 0, 0.75);
+  width: 17rem;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
+  -webkit-transform: translateX(-200%);
+          transform: translateX(-200%);
+  position: absolute;
+  margin-top: 1.5rem;
+  overflow: auto;
+  z-index: 10;
+  will-change: transform;
+}
+.audioPlayer .audioPlayerList.isActive {
+  -webkit-transform: translateX(0);
+          transform: translateX(0);
+}
+.audioPlayer .audioPlayerList .item {
+  margin-bottom: 1.5rem;
+  border-left: 0.1rem solid transparent;
+  -webkit-transition: 0.2s;
+  transition: 0.2s;
+}
+.audioPlayer .audioPlayerList .item:hover {
+  padding-left: 0.5rem;
+  cursor: pointer;
+}
+.audioPlayer .audioPlayerList .item .title {
+  color: black;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+.audioPlayer .audioPlayerList .item .artist {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.8rem;
+}
+.audioPlayer .audioPlayerList .item.isActive {
+  border-left-color: black;
+  padding-left: 1rem;
+}
+.audioPlayer .audioPlayerList .debugToggle {
+  cursor: pointer;
+  color: red;
+}
+.audioPlayer .audioPlayerUI {
+  margin-top: 1.5rem;
+  will-change: transform, filter;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
+}
+.audioPlayer .audioPlayerUI.isDisabled {
+  -webkit-transform: scale(0.75) translateX(100%);
+          transform: scale(0.75) translateX(100%);
+  -webkit-filter: blur(5px) grayscale(100%);
+          filter: blur(5px) grayscale(100%);
+}
+.audioPlayer .audioPlayerUI .albumDetails {
+  text-align: center;
+  margin: 2rem 0;
+}
+.audioPlayer .audioPlayerUI .albumDetails p {
+  margin: 0px;
+}
+.audioPlayer .audioPlayerUI .albumDetails p.title {
+  font-size: 1rem;
+  color: black;
+}
+.audioPlayer .audioPlayerUI .albumDetails p.artist {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: none;
+  color: rgba(0, 0, 0, 0.75);
+  -webkit-transition-delay: 100ms;
+          transition-delay: 100ms;
+}
+.audioPlayer .audioPlayerUI .albumImage {
+  width: 17rem;
+  height: 17rem;
   overflow: hidden;
-  z-index: 1;
-  margin-left: 10px;
+  margin: 0 auto;
 }
-.wrapper .content .middleContent .playlistsContent .playlist .playlistThumb img {
+.audioPlayer .audioPlayerUI .albumImage img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  z-index: 10;
+  -o-object-fit: cover;
+     object-fit: cover;
+  -o-object-position: 50% 50%;
+     object-position: 50% 50%;
+  border-radius: 0.5rem;
 }
-.wrapper .content .middleContent .playlistsContent .playlist .playlistBg {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #5a5a5a;
-}
-.wrapper .content .middleContent .playlistsContent .playlist .playlistBg img {
-  width: 120%;
-  height: 160%;
-  object-fit: cover;
-  filter: blur(8px) grayscale(1);
-  opacity: 0.6;
-}
-.wrapper .content .middleContent .playlistsContent .playlist .playlistBg:before {
-  position: absolute;
-  content: "";
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  background: linear-gradient(145deg, rgba(0, 0, 0, 0.8) -20%, transparent 50%);
-}
-.wrapper .content .middleContent .playlistsContent .playlist .playlistTitle {
-  z-index: 1;
-  margin-left: 20px;
-  text-transform: uppercase;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-}
-.wrapper .content .middleContent .playlistsContent .playlist.selected {
-  transition: all 0.2s ease;
-  opacity: 1;
-}
-.wrapper .content .middleContent .playlistsContent .playlist.selected .checkbox:before {
-  width: 20px;
-  height: 20px;
-  opacity: 1;
-}
-.wrapper .content .middleContent .playlistsContent .playlist.selected .playlistBg img {
-  filter: blur(8px) grayscale(0);
-}
-.wrapper .content .middleContent .swiper-container {
-  height: 100%;
-}
-.wrapper .content .middleContent .swiper-slide {
-  width: 280px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.wrapper .content .middleContent .swiper-slide.open {
-  transform: translateY(0);
-}
-.wrapper .content .middleContent .swiper-slide-active .settings {
-  transition: all 0.4s 0.4s ease;
-  opacity: 1;
-  transform: translateY(0px);
-}
-.wrapper .content .middleContent .swiper-slide-active.open .playlistsContent {
-  transform: translateY(0);
-}
-.wrapper .content .bottomContent {
-  width: 100%;
-  min-height: 100px;
-  max-height: 100px;
-  background-color: rgba(232, 232, 240, 0.5);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-direction: column;
-  backdrop-filter: blur(5px);
-  transition: all 0.4s 0.2s ease;
-  padding: 5px 30px 20px 30px;
-  box-sizing: border-box;
-}
-.wrapper .content .bottomContent .bottomExpand {
-  transform: rotate(-180deg);
-  opacity: 0.5;
-}
-.wrapper .content .bottomContent .progressBar {
-  width: 100%;
-  visibility: hidden;
-  height: 0;
-  opacity: 0;
-  transition: all 0.4s ease;
-  transform: translateY(-60px);
-}
-@media screen and (max-width: 640px) {
-  .wrapper .content .bottomContent .progressBar {
-    box-sizing: border-box;
-  }
-}
-.wrapper .content .bottomContent .progressBar .timer {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.wrapper .content .bottomContent .progressBar .barTimer {
-  width: 100%;
-  height: 5px;
-  background-color: rgba(255, 255, 255, 0.4);
-  border-radius: 5px;
+.audioPlayer .audioPlayerUI .playerButtons {
   position: relative;
+  margin: 0 auto;
+  text-align: center;
 }
-.wrapper .content .bottomContent .progressBar .barTimer .progress {
-  position: absolute;
-  background-color: white;
-  height: 100%;
-  width: 0%;
-  border-radius: 4px;
-  transition: all 0.4s ease;
+.audioPlayer .audioPlayerUI .playerButtons .button {
+  font-size: 2rem;
+  display: inline-block;
+  vertical-align: middle;
+  padding: 0.5rem;
+  margin: 0 0.25rem;
+  color: rgba(0, 0, 0, 0.75);
+  border-radius: 50%;
+  outline: 0;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
 }
-.wrapper .content .bottomContent .player {
+.audioPlayer .audioPlayerUI .playerButtons .button.play {
+  font-size: 4rem;
+  margin: 0 1.5rem;
+}
+.audioPlayer .audioPlayerUI .playerButtons .button:active {
+  opacity: 0.75;
+  -webkit-transform: scale(0.75);
+          transform: scale(0.75);
+}
+.audioPlayer .audioPlayerUI .playerButtons .button.isDisabled {
+  color: rgba(0, 0, 0, 0.2);
+  cursor: initial;
+}
+.audioPlayer .audioPlayerUI .playerButtons .button.isDisabled:active {
+  -webkit-transform: none;
+          transform: none;
+}
+.audioPlayer .audioPlayerUI .currentTimeContainer {
   width: 100%;
+  height: 1rem;
+  display: -webkit-box;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.2s 0.2s ease;
+  -webkit-box-pack: justify;
+          justify-content: space-between;
 }
-.wrapper .content .bottomContent .player .btnPlay {
-  background-color: rgba(255, 255, 255, 0.2);
-  width: 40px;
-  height: 40px;
-  border-radius: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease;
+.audioPlayer .audioPlayerUI .currentTimeContainer .currentTime,
+.audioPlayer .audioPlayerUI .currentTimeContainer .totalTime {
+  font-size: 0.5rem;
+  font-family: monospace;
+  color: rgba(0, 0, 0, 0.75);
 }
-.wrapper .content .bottomContent .player .btnPlay.pause {
-  background-color: rgba(255, 255, 255, 0.4);
-}
-.wrapper .content .bottomContent .player .btnPlay.pause .play:before {
-  background-image: url("https://www.rafaelalucas.com/dailyui/9/assets/pause.svg");
-}
-.wrapper .content .bottomContent.expand {
-  transition: all 0.4s ease;
-  min-height: 200px;
-  max-height: 200px;
-  padding: 10px 30px 20px 30px;
-}
-.wrapper .content .bottomContent.expand .bottomExpand {
-  transform: rotate(0deg);
-  opacity: 1;
-}
-.wrapper .content .bottomContent.expand .progressBar {
-  opacity: 1;
-  visibility: visible;
-  height: 50px;
-  transition: all 0.4s 0.2s ease;
-  transform: translateY(-10px);
-}
-.wrapper .content .bottomContent.expand .player .btnPlay {
-  width: 60px;
-  height: 60px;
-}
-.wrapper .content .bottomContent.expand .player .btnPlay .icon:before {
-  width: 32px;
-  height: 32px;
-}
-.wrapper .content .bottomContent.expand .player .btnPlay .icon:active:before {
-  width: 38px;
-  height: 38px;
-}
-.wrapper .content .albumBg {
-  position: absolute;
+.audioPlayer .audioPlayerUI .currentProgressBar {
   width: 100%;
-  max-height: 760px;
-  height: 100%;
-  top: 0;
-  z-index: -1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 0.75rem 0;
 }
-@media screen and (max-width: 640px) {
-  .wrapper .content .albumBg {
-    max-height: 100vh;
-  }
-}
-@media screen and (max-height: 600px) {
-  .wrapper .content .albumBg {
-    max-height: 100%;
-    height: 100%;
-    min-height: 600px;
-  }
-}
-.wrapper .content .albumBg:before, .wrapper .content .albumBg:after {
-  position: absolute;
-  content: "";
-  width: 100%;
-  height: 100%;
-  top: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) -40%, transparent 50%);
-  z-index: 1;
-}
-.wrapper .content .albumBg:after {
-  top: initial;
-  bottom: 0;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.5) -60%, transparent 50%);
-}
-.wrapper .content .albumBg .bg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.wrapper .content .albumBg .bg:before {
-  position: absolute;
-  content: "";
-  width: 150%;
-  height: 150%;
-  z-index: 2;
-  backdrop-filter: blur(10px);
-}
-.wrapper .content .albumBg .bg img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.wrapper .content .albumBg.animeBg .bg {
-  animation: animeBg 0.6s ease-in-out both;
-}
-@keyframes animeBg {
-  0% {
-    width: 100%;
-    height: 100%;
-  }
-  50% {
-    width: 130%;
-    height: 130%;
-  }
-  100% {
-    width: 100%;
-    height: 100%;
-  }
-}
-.wrapper .content .albumBg.animeBg .bg:before {
-  animation: animeBg2 0.6s ease-in-out both;
-}
-@keyframes animeBg2 {
-  0% {
-    width: 150%;
-    height: 150%;
-    backdrop-filter: blur(10px);
-  }
-  50% {
-    backdrop-filter: blur(40px);
-  }
-  100% {
-    width: 150%;
-    height: 150%;
-    backdrop-filter: blur(10px);
-  }
-}
-.wrapper .bodyBg {
-  width: 100%;
-  height: 100%;
-  position: fixed;
-  z-index: -2;
-  transition: all 0.4s ease;
+.audioPlayer .audioPlayerUI .currentProgressBar .currentProgress {
+  background-color: rgba(0, 0, 0, 0.75);
+  width: 0px;
+  height: 1px;
+  -webkit-transition: 100ms;
+  transition: 100ms;
 }
 
-.swiper-button-prev,
-.swiper-button-next {
-  all: unset;
+.loader {
+  margin: 60px auto;
+  font-size: 10px;
+  position: relative;
+  text-indent: -9999em;
+}
+
+/* data change transitions */
+.slide-fade-enter-active {
+  -webkit-transition: all 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+.slide-fade-leave-active {
+  -webkit-transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter,
+.slide-fade-leave-to {
+  -webkit-transform: translateY(10px);
+          transform: translateY(10px);
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  -webkit-transition: opacity 0.5s;
+  transition: opacity 0.5s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* pen specific formatting */
+body {
+  background: #29B6F6;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: Raleway, sans-serif;
+  padding: 3rem;
+}
+
+.heading {
+  text-align: center;
+  margin: 0;
+  margin: 2rem 0;
+  font-family: Inconsolata, monospace;
+}
+.heading h1 {
+  color: #ECEFF1;
+  margin: 0;
+  margin-bottom: 1rem;
+  font-size: 1.75rem;
+}
+.heading p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.heading a {
+  color: rgba(255, 255, 255, 0.8);
+  -webkit-transition: 0.3s;
+  transition: 0.3s;
+  -webkit-text-decoration-style: dotted;
+          text-decoration-style: dotted;
+}
+.heading a:hover {
+  color: white !important;
+}
+.heading a:visited {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 </style>
 
-
 <script>
-  window.addEventListener("load", event => {
-   ////////////////
-   // Variables
-   ////////////////
-
-   const iconTopExpand = document.querySelector(".icon.topExpand"),
-         iconBottomExpand = document.querySelector(".icon.bottomExpand"),
-         topContent = document.querySelector(".topContent"),
-         bottomContent = document.querySelector(".bottomContent"),
-         playBtn = document.querySelector(".btnPlay"),
-         musicGroups = document.querySelector(".swiper-wrapper.slider-two"),
-         swipperWrapper = document.querySelector(".swiper-wrapper.slider-one"),
-         imageBg = document.querySelector(".imageBg"),
-         albumBg = document.querySelector(".albumBg"),
-         wrapper = document.querySelector(".wrapper"),
-         bodyBg = document.querySelector(".bodyBg"),
-         next = document.querySelector(".swiper-button-next"),
-         prev = document.querySelector(".swiper-button-prev");
-
-   // Songs
-   const songs = [
+  var app = new Vue({
+	el: "#app",
+	data: {
+		audio: "",
+		imgLoaded: false,
+		currentlyPlaying: false,
+		currentlyStopped: false,
+		currentTime: 0,
+		checkingCurrentPositionInTrack: "",
+		trackDuration: 0,
+		currentProgressBar: 0,
+		isPlaylistActive: false,
+		currentSong: 0,
+		debug: false,
+		musicPlaylist: [
+			{
+				title: "PLAYA",
+				artist: "by YaProd",
+				url: "img/PLAYA.mp3",
+				image: "img/playa.jpg"
+			},
+			{
+				title: "TIMBALE",
+				artist: "by YaProd",
+				url: "img/TIMBALE.mp3",
+				image: "img/timbale.jpg"
+			},
+			{
+				title: "SALSA",
+				artist: "by YaProd",
+				url: "img/SALSA.mp3",
+				image: "img/salsa.jpg"
+			},
+			{
+				title: "PROJET D",
+				artist: "by YaProd Remastering DXNNY",
+				url: "img/PROJET D.mp3",
+				image: "img/d.png"
+			},
       {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/jain.jpg",
-         artistName: "Jain",
-         songName: "Makeba",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song1.mp3",
-         color: "#f5c63d"
-      },
+				title: "VALLEY",
+				artist: "by YaProd",
+				url: "img/VALLEY.mp3",
+				image: "img/valley.jpg"
+			},
       {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/ohland.jpg",
-         artistName: "Oh Land",
-         songName: "Postpone the Bad",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song2.mp3",
-         color: "#afc5c3"
-      },
+				title: "COMMENCEMENT",
+				artist: "by YaProd",
+				url: "img/COMMENCEMENT.mp3",
+				image: "img/commencement.jpg"
+			},
       {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/angele.jpg",
-         artistName: "Angèle",
-         songName: "La Loi de Murphy",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song3.mp3",
-         color: "#74c2dd"
-      },
-      {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/broods.jpg",
-         artistName: "Broods",
-         songName: "Bridges",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song1.mp3",
-         color: "#a3b8b0"
-      },
-      {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/alice.jpg",
-         artistName: "Alice Phoebe Lou",
-         songName: "Orbit",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song2.mp3",
-         color: "#38736d"
-      },
-      {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/feist.jpg",
-         artistName: "Feist",
-         songName: "The Bad in Each Other",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song3.mp3",
-         color: "#a4b1b2"
-      },
+				title: "THIS IS MY STORY",
+				artist: "by YaProd",
+				url: "img/THIS IS MY STORY.mp3",
+				image: "img/story.jpg"
+			}
+		],
+		audioFile: ""
+	},
+	mounted: function() {
+		this.changeSong();
+		this.audio.loop = false;
+	},
+	filters: {
+		fancyTimeFormat: function(s) {
+			return (s - (s %= 60)) / 60 + (9 < s ? ":" : ":0") + s;
+		}
+	},
+	methods: {
+		togglePlaylist: function() {
+			this.isPlaylistActive = !this.isPlaylistActive;
+		},
+		nextSong: function() {
+			if (this.currentSong < this.musicPlaylist.length - 1)
+				this.changeSong(this.currentSong + 1);
+		},
+		prevSong: function() {
+			if (this.currentSong > 0) this.changeSong(this.currentSong - 1);
+		},
+		changeSong: function(index) {
+			var wasPlaying = this.currentlyPlaying;
+			this.imageLoaded = false;
+			if (index !== undefined) {
+				this.stopAudio();
+				this.currentSong = index;
+			}
+			this.audioFile = this.musicPlaylist[this.currentSong].url;
+			this.audio = new Audio(this.audioFile);
+			var localThis = this;
+			this.audio.addEventListener("loadedmetadata", function() {
+				localThis.trackDuration = Math.round(this.duration);
+			});
+			this.audio.addEventListener("ended", this.handleEnded);
+			if (wasPlaying) {
+				this.playAudio();
+			}
+		},
+		isCurrentSong: function(index) {
+			if (this.currentSong == index) {
+				return true;
+			}
+			return false;
+		},
+		getCurrentSong: function(currentSong) {
+			return this.musicPlaylist[currentSong].url;
+		},
+		playAudio: function() {
+			if (
+				this.currentlyStopped == true &&
+				this.currentSong + 1 == this.musicPlaylist.length
+			) {
+				this.currentSong = 0;
+				this.changeSong();
+			}
+			if (!this.currentlyPlaying) {
+				this.getCurrentTimeEverySecond(true);
+				this.currentlyPlaying = true;
+				this.audio.play();
+			} else {
+				this.stopAudio();
+			}
+			this.currentlyStopped = false;
+		},
+		stopAudio: function() {
+			this.audio.pause();
+			this.currentlyPlaying = false;
+			this.pausedMusic();
+		},
+		handleEnded: function() {
+			if (this.currentSong + 1 == this.musicPlaylist.length) {
+				this.stopAudio();
+				this.currentlyPlaying = false;
+				this.currentlyStopped = true;
+			} else {
+				this.currentlyPlaying = false;
+				this.currentSong++;
+				this.changeSong();
+				this.playAudio();
+			}
+		},
+		onImageLoaded: function() {
+			this.imgLoaded = true;
+		},
+		getCurrentTimeEverySecond: function(startStop) {
+			var localThis = this;
+			this.checkingCurrentPositionInTrack = setTimeout(
+				function() {
+					localThis.currentTime = localThis.audio.currentTime;
+					localThis.currentProgressBar =
+						localThis.audio.currentTime / localThis.trackDuration * 100;
+					localThis.getCurrentTimeEverySecond(true);
+				}.bind(this),
+				1000
+			);
+		},
+		pausedMusic: function() {
+			clearTimeout(this.checkingCurrentPositionInTrack);
+		},
+		toggleDebug: function(){
+			this.debug=!this.debug;
+			document.body.classList.toggle('debug');
+		}
+	},
+	watch: {
+		currentTime: function() {
+			this.currentTime = Math.round(this.currentTime);
+		}
+	},
+	beforeDestroy: function() {
+		this.audio.removeEventListener("ended", this.handleEnded);
+		this.audio.removeEventListener("loadedmetadata", this.handleEnded);
 
-      {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/dagny.jpg",
-         artistName: "Dagny",
-         songName: "Ultraviolet",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song1.mp3",
-         color: "#8098ce"
-      },
-      {
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/sigrid.jpg",
-         artistName: "Sigrid",
-         songName: "Dynamite",
-         song: "https://www.rafaelalucas.com/dailyui/9/songs/song2.mp3",
-         color: "#1a91bd"
-      }
-   ];
-
-   // Music Groups
-   const groups = [
-      {
-         title: "Songs",
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/img06.jpg"
-      },
-      {
-         title: "Artists",
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/img07.jpg"
-      },
-      {
-         title: "Playlists",
-         img:
-         "https://images.pexels.com/photos/761963/pexels-photo-761963.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400"
-      },
-      {
-         title: "Favourites",
-         img: "https://www.rafaelalucas.com/dailyui/9/covers/img10.jpg"
-      }
-   ];
-
-   // Playlists
-   const playlists = [
-      {
-         title: "Pop Music",
-         img:
-         "https://images.pexels.com/photos/761963/pexels-photo-761963.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400"
-      },
-      {
-         title: "On the road!",
-         img:
-         "https://images.pexels.com/photos/3049327/pexels-photo-3049327.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400"
-      },
-      {
-         title: "Christmas Songs",
-         img:
-         "https://images.pexels.com/photos/1661905/pexels-photo-1661905.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400"
-      },
-      {
-         title: "Rainy days",
-         img:
-         "https://images.pexels.com/photos/216657/pexels-photo-216657.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400"
-      }
-   ];
-
-   ////////////////
-   // Events
-   ////////////////
-
-   iconTopExpand.addEventListener("click", expandTop);
-   iconBottomExpand.addEventListener("click", expandBottom);
-   playBtn.addEventListener("click", playSong);
-
-   ////////////////
-   // Functions
-   ////////////////
-
-   function playSong() {
-      if (playBtn.classList.contains("pause")) {
-         playBtn.classList.remove("pause");
-         document.querySelector(".swiper-slide-active audio").pause();
-      } else {
-         playBtn.classList.add("pause");
-         document.querySelector(".swiper-slide-active audio").play();
-      }
-      progressBar();
-   }
-
-   function expandTop() {
-      if (topContent.classList.contains("expand")) {
-         topContent.classList.remove("expand");
-      } else {
-         topContent.classList.add("expand");
-
-         //Swiper Music Goups
-         var mySwiper2 = new Swiper(".swiper-container.slider-two", {
-            // Optional parameters
-            direction: "horizontal",
-            slidesPerView: "auto",
-            draggable: true
-         });
-      }
-      albumSize();
-   }
-
-   function expandBottom() {
-      if (bottomContent.classList.contains("expand")) {
-         bottomContent.classList.remove("expand");
-      } else {
-         bottomContent.classList.add("expand");
-      }
-      albumSize();
-      progressBar();
-   }
-
-   // change Album size
-
-   function albumSize() {
-      const albumContent = document.querySelectorAll(".albumContent");
-
-      if (
-         topContent.classList.contains("expand") &&
-         bottomContent.classList.contains("expand")
-      ) {
-         albumContent.forEach(function(el) {
-            el.classList.add("small");
-         });
-      } else {
-         albumContent.forEach(function(el) {
-            el.classList.remove("small");
-         });
-      }
-   }
-
-   //Swiper Albums
-
-   songs.forEach(function(el) {
-      let template = `
-<div class="swiper-slide">
-<div class="settings">
-<div class="icon heart"></div>
-<div class="icon plus"></div>
-</div>
-<audio src="${el.song}"></audio>
-<div class="albumContent">
-<div class="albumCover" style="background-color:${
-      el.color
-      }"><img src="${el.img}"></div>
-<p class="artistName">${el.artistName}</p>
-<p class="songName">${el.songName}</p></div>
-<div class="playlistsContent">
-<div class="icon close"></div>
-</div>
-</div>`;
-
-      swipperWrapper.insertAdjacentHTML("beforeend", template);
-   });
-
-   // To Create Playlists
-   playlists.forEach(function(el) {
-      let templatePlaylist = `
-<div class="playlist">
-<span class="checkbox"></span>
-<figure class="playlistBg"><img src="${el.img}"></figure>
-<figure class="playlistThumb"><img src="${el.img}"></figure>
-<p class="playlistTitle">${el.title}</p></div>`;
-
-      var playlistContent = document.querySelectorAll(".playlistsContent");
-
-      playlistContent.forEach(function(el) {
-         el.insertAdjacentHTML("beforeend", templatePlaylist);
-      });
-   });
-
-   // Slider Songs (Middle)
-
-   var mySwiper = new Swiper(".swiper-container.slider-one", {
-      // Optional parameters
-      direction: "horizontal",
-      loop: true,
-      centeredSlides: true,
-      slidesPerView: 1,
-      spaceBetween: 20,
-      speed: 600,
-      allowTouchMove: false,
-      effect: "coverflow",
-
-      coverflowEffect: {
-         rotate: 40,
-         slideShadows: false
-      },
-
-      // Navigation arrows
-      navigation: {
-         nextEl: ".swiper-button-next",
-         prevEl: ".swiper-button-prev"
-      }
-   });
-
-   // Change Song & Album BG
-   next.addEventListener("click", changeSong);
-   prev.addEventListener("click", changeSong);
-
-   function changeSong() {
-      if (playBtn.classList.contains("pause")) {
-         document.querySelectorAll("audio").forEach(function(el) {
-            el.pause();
-         });
-         document.querySelector(".swiper-slide-active audio").play();
-      }
-      changeBg();
-      progressBar();
-      closePlaylists();
-      changeBgColor();
-   }
-
-   function changeBg() {
-      albumBg.classList.add("animeBg");
-
-      setTimeout(() => {
-         imageBg.src = document.querySelector(
-            ".slider-one .swiper-slide-active img"
-         ).src;
-      }, 300);
-
-      setTimeout(() => {
-         albumBg.classList.remove("animeBg");
-      }, 700);
-   }
-
-   function changeBgColor() {
-      var getColor = document.querySelector(
-         ".slider-one .swiper-slide-active .albumCover"
-      ),
-          activeColor = getColor.style.backgroundColor;
-
-      setTimeout(() => {
-         bodyBg.style.backgroundColor = activeColor;
-      }, 200);
-   }
-
-   // Music Groups
-
-   for (let i = 0; i < groups.length; i++) {
-      const { title, img } = groups[i];
-
-      var template2 = `<div class="swiper-slide group">
-<figure><img src="${img}"></figure>
-<p class = "titleGroup">${title}</p>
-</div>`;
-
-      musicGroups.insertAdjacentHTML("beforeend", template2);
-   }
-
-   // Add favourites & Playlist
-
-   const heart = document.querySelectorAll(".heart"),
-         plus = document.querySelectorAll(".plus"),
-         close = document.querySelectorAll(".close"),
-         playlist = document.querySelectorAll(".playlist");
-
-   heart.forEach(function(el) {
-      el.addEventListener("click", addFave);
-   });
-
-   plus.forEach(function(el) {
-      el.addEventListener("click", openPlaylists);
-   });
-
-   close.forEach(function(el) {
-      el.addEventListener("click", openPlaylists);
-   });
-
-   playlist.forEach(function(el) {
-      el.addEventListener("click", addPlaylist);
-   });
-
-   function addFave(e) {
-      if (e.currentTarget.classList.contains("fave")) {
-         e.currentTarget.classList.remove("fave");
-      } else {
-         e.currentTarget.classList.add("fave");
-      }
-   }
-
-   function openPlaylists(e) {
-      if (
-         e.currentTarget
-         .closest(".swiper-slide-active")
-         .classList.contains("open")
-      ) {
-         e.currentTarget
-            .closest(".swiper-slide-active")
-            .classList.remove("open");
-      } else {
-         e.currentTarget.closest(".swiper-slide-active").classList.add("open");
-      }
-   }
-
-   function closePlaylists() {
-      document.querySelector(".swiper-slide-active").classList.remove("open");
-   }
-
-   function addPlaylist(e) {
-      if (e.currentTarget.classList.contains("selected")) {
-         e.currentTarget.classList.remove("selected");
-      } else {
-         e.currentTarget.classList.add("selected");
-      }
-   }
-
-   // Song Progress Bar
-
-   function formatTime(seconds) {
-      minutes = Math.floor(seconds / 60);
-      minutes = minutes >= 10 ? minutes : "0" + minutes;
-      seconds = Math.floor(seconds % 60);
-      seconds = seconds >= 10 ? seconds : "0" + seconds;
-      return minutes + ":" + seconds;
-   }
-
-   function progressBar() {
-      var songDuration = document.querySelector(".swiper-slide-active audio")
-      .duration,
-          endTime = document.querySelector(".endTime"),
-          songAudio = document.querySelector(".swiper-slide-active audio"),
-          currentTime = document.querySelector(".currentTime");
-
-      endTime.innerHTML = formatTime(songDuration);
-
-      songAudio.ontimeupdate = function() {
-         var progress = document.querySelector(".progress");
-         progress.style.width =
-            songAudio.currentTime * 100 / songDuration + "%";
-         currentTime.innerHTML = formatTime(songAudio.currentTime);
-      };
-   }
-
-   ////////////////
-   // Call Functions
-   ////////////////
-
-   changeBg();
-   progressBar();
-   changeBgColor();
-
-   wrapper.style.height = window.innerHeight + "px";
-
-   console.log(window.innerHeight);
+		clearTimeout(this.checkingCurrentPositionInTrack);
+	}
 });
 
 </script>
+
+</body>
+</html>
