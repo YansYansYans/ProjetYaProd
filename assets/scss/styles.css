@@ -32,6 +32,12 @@ header nav ul li a {
   z-index: 50;
 }
 
+header nav ul li a:hover {
+  color: #b47b00;
+  -webkit-transition: 500ms;
+  transition: 500ms;
+}
+
 .main-title {
   z-index: 100;
   position: relative;
@@ -82,16 +88,33 @@ header nav ul li a {
   .header-device a i {
     font-size: 1.5em;
     color: white;
-    padding-bottom: -50px;
-  }
-  .header-device a h6 {
-    margin-top: 8px;
-    font-family: 'saira_condensedlight';
+    padding-bottom: 20px;
   }
   .header-device-music {
     background-color: #272727;
     z-index: 1000;
-    padding-top: 10px;
+    padding-top: 20px;
+  }
+  .header-device-spe {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-pack: distribute;
+        justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    z-index: 100;
+    width: 100%;
+    margin-left: -10px;
+  }
+  .header-device-spe a {
+    text-decoration: none;
+    color: black;
+  }
+  .header-device-spe a i {
+    font-size: 1.5em;
+    color: black;
+    padding-bottom: 20px;
   }
   header {
     display: none;
