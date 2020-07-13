@@ -48,7 +48,6 @@
             <div class="albumImage">
                 <transition name="ballmove" enter-active-class="animated zoomIn"
                     leave-active-class="animated fadeOutDown" mode="out-in">
-                    <!--<transition name="slide-fade" mode="out-in">-->
                     <img @load="onImageLoaded()" :src="musicPlaylist[currentSong].image" :key="currentSong"
                         ondragstart="return false;" id="playerAlbumArt">
                 </transition>
@@ -104,7 +103,7 @@
         <a href="mailto:punchcorp4@gmail.com">
             <i class="fas fa-paper-plane"></i>
         </a>
-        <a href="sites">
+        <a href="sites.html">
             <i class="fas fa-plus-circle"></i>
         </a>
     </div>
@@ -229,6 +228,7 @@
         .audioPlayer .audioPlayerList .item.isActive {
             opacity: 60%;
         }
+
         .audioPlayer .audioPlayerUI .albumDetails {
             text-align: center;
             margin: 2rem 0;
@@ -381,6 +381,15 @@
             .audioPlayer {
                 margin-top: 30px;
                 margin-bottom: 50px;
+            }
+
+            .audioPlayer .audioPlayerUI .albumImage {
+                width: 15rem;
+                height: 15rem;
+            }
+
+            .audioPlayer .audioPlayerUI .albumImage img {
+                border-radius: 0rem;
             }
         }
     </style>
